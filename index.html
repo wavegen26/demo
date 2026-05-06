@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head> 
+    <meta charset="utf-8">
+    <meta name="description"
+        content="WaveGen: Truly End-to-End Waveform Generation via Internal Spectral Trajectory Learning">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>WaveGen</title> 
+
+    <link href="https://fonts.googleapis.com/css?family=Google+Sans|Noto+Sans|Castoro"
+    rel="stylesheet">
+
+    <link rel="stylesheet" href="./static/css/bulma.min.css">
+    <link rel="stylesheet" href="./static/css/bulma-carousel.min.css">
+    <link rel="stylesheet" href="./static/css/bulma-slider.min.css">
+    <link rel="stylesheet" href="./static/css/fontawesome.all.min.css">
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/gh/jpswalsh/academicons@1/css/academicons.min.css">
+    <link rel="stylesheet" href="./static/css/index.css">
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script defer src="./static/js/fontawesome.all.min.js"></script>
+    <script src="./static/js/bulma-carousel.min.js"></script>
+    <script src="./static/js/bulma-slider.min.js"></script>
+    <script id="MathJax-script" async
+    src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js">
+    </script>
+    </head>
+
+<body>
+<section class="hero">
+    <div class="hero-body" style="padding-bottom: 24px;">
+        <div class="container is-max-desktop">
+        <div class="columns is-centered">
+            <div class="column has-text-centered">
+            <h1 class="title is-2 publication-title">WaveGen: Truly End-to-End Waveform Generation via Internal Spectral Trajectory Learning</h1>
+            <div class="is-size-5 publication-authors">
+              <span class="author-block">
+                Anonymous Authors
+
+              </span>
+          </div>
+
+   
+            <div class="column has-text-centered">
+                <div class="publication-links"> 
+                <span class="link-block">
+                    <a href=""
+                    class="external-link button is-normal is-rounded is-pink">
+                    <span class="icon">
+                        <i class="fab fa-github"></i>
+                    </span>
+                    <span>Source Code (TBA) </span>
+                    </a>
+                </span>
+                </div>
+            </div>
+            </div>
+        </div>
+        </div>
+    </div>
+    </section> 
+<!--  
+<div style="height: 40px;"></div> -->
+ 
+<section class="section" style="padding-top: 20px;">
+  <div class="container is-max-desktop"> 
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title is-3">Abstract</h2>
+          <div class="content has-text-justified">
+
+          </div> 
+        </div>
+      </div>  
+    </div>
+  </section> 
+
+
+  <section class="section" style="padding-top: 0px;">
+    <div class="container is-max-desktop">
+      <div class="columns is-centered has-text-centered">
+        <div class="column is-four-fifths">
+          <h2 class="title is-3">Contents</h2>
+          <div class="content has-text-left">
+            <ul>
+              <li><a href="#s1">TTS</a></li> 
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+</section>
+
+
+<footer class="footer">
+  <div class="container">
+    <div class="columns is-centered has-text-centered">
+      <div class="column is-four-fifths">
+        <h2 class="title is-3">Licenses</h2>
+        <div class="content">
+          <p>
+            This website is licensed under a <a rel="license"
+                                                href="http://creativecommons.org/licenses/by-sa/4.0/">Creative
+            Commons Attribution-ShareAlike 4.0 International License</a>.
+          </p>
+          <p>
+            Website source code based on the <a href="https://github.com/nerfies/nerfies.github.io">Nerfies</a> project page.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
+
+
+<button onclick="scrollToTop()" id="topBtn" style="position: fixed; bottom: 20px; right: 30px; display: none; background-color: #680845; color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 16px;">
+  ⬆
+  </button>
+  
+  <script> 
+    window.onscroll = function() {scrollFunction()};
+  
+    function scrollFunction() {
+      var topBtn = document.getElementById("topBtn");
+      if (document.body.scrollTop > 20 || document.documentElement.scrollTop > 20) {
+        topBtn.style.display = "block";
+      } else {
+        topBtn.style.display = "none";
+      }
+    }
+   
+    function scrollToTop() {
+      document.body.scrollTop = 0;            // Safari
+      document.documentElement.scrollTop = 0; // Chrome,IE
+    }
+  </script>
+  
+<script type="text/javascript">
+    document.addEventListener('contextmenu', function(e) {
+      e.preventDefault();
+    });
+</script> 
+
+<style>   
+    a {
+      color: hsl(330, 80%, 37%);  
+    }
+ 
+    a:hover {
+      color: hsl(330, 71%, 5%);  
+      text-decoration: underline;
+    }  
+
+    .audio-w audio::-webkit-media-controls-panel {
+      background-color: white !important;
+    }  
+ 
+    .is-pink {
+    background-color: #f13291 !important;  
+    border-color: #f13291 !important;  
+    color: white !important; 
+    }
+
+    .is-pink:hover {
+    background-color: #ff1493 !important;  
+    border-color: #ff1493 !important;
+    } 
+ 
+    .hero .container {
+    max-width: 100%;
+    width: 100%;
+    }
+
+    .hero table {
+    width: 100%;
+    table-layout: fixed;
+    } 
+    
+    .hero audio {
+    width: 100%;
+    height: 40px;
+    }
+
+</style>
