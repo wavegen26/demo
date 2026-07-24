@@ -51,6 +51,19 @@
       line-height: 1.55;
     }
 
+    .training-notice {
+      max-width: 980px;
+      margin: 10px auto 0;
+      padding: 8px 12px;
+      color: #7f2942;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.45;
+      border: 1px solid #e8b9c6;
+      border-radius: 6px;
+      background: #fff1f4;
+    }
+
     main {
       width: min(1480px, calc(100vw - 24px));
       margin: 18px auto 34px;
@@ -59,7 +72,7 @@
     .toolbar {
       display: grid;
       grid-template-columns:
-        minmax(110px, 0.8fr)
+        minmax(170px, 1.1fr)
         minmax(270px, 1.9fr)
         minmax(310px, 2.2fr)
         minmax(180px, 1.3fr)
@@ -162,6 +175,13 @@
       font-variant-numeric: tabular-nums;
       color: var(--ink);
       font-weight: 800;
+    }
+
+    .control-hint {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.3;
+      text-align: center;
     }
 
     .config-grid {
@@ -290,7 +310,7 @@
       font-weight: 800;
     }
 
-    @media (max-width: 1320px) {
+    @media (max-width: 1400px) {
       .toolbar {
         grid-template-columns: repeat(3, minmax(140px, 1fr));
       }
@@ -357,13 +377,18 @@
     <p class="formula">
       x_t = (1 - t) * x0 + t * (x1 * latents_scale), mel = log(clamp(MelSpectrogram(power=1), 1e-5)), n_fft = hop * 4, n_mels = 64
     </p>
+    <p class="training-notice" role="note">
+      Training-time visualization: These are not model-generated samples. This demo shows how x_t and the Spectral Forcing mel input are constructed from noise and a target waveform during training.
+    </p>
   </header>
 
   <main>
     <section class="toolbar" aria-label="controls">
-      <label class="control">
+      <label class="control t-control">
         <div class="value-row"><span>t</span><output id="tValue" class="value">0.50</output></div>
         <input id="tSlider" type="range" min="0" max="1" step="0.01" value="0.5">
+        <button id="animateTButton" type="button" aria-pressed="false">Play t 0 -&gt; 1</button>
+        <small class="control-hint">Click this button or drag t yourself!</small>
       </label>
 
       <div class="control preset-control">
@@ -519,6 +544,7 @@
     const els = {
       tSlider: document.getElementById("tSlider"),
       tValue: document.getElementById("tValue"),
+      animateTButton: document.getElementById("animateTButton"),
       waveGenPreset: document.getElementById("waveGenPreset"),
       wavTtsPreset: document.getElementById("wavTtsPreset"),
       activeScale: document.getElementById("activeScale"),
@@ -560,6 +586,9 @@
       sampleSeed: 9001,
       audioCtx: null,
       currentSource: null,
+      tAnimationFrame: null,
+      tAnimationStart: 0,
+      tAnimationStep: -1,
       renderQueued: false,
       lastWaveMelKey: "",
       cachedWaveMel: null
@@ -1169,6 +1198,53 @@
       ]);
     }
 
+    function stopTAnimation(completed = false) {
+      if (state.tAnimationFrame !== null) {
+        cancelAnimationFrame(state.tAnimationFrame);
+        state.tAnimationFrame = null;
+      }
+      state.tAnimationStep = -1;
+      els.animateTButton.setAttribute("aria-pressed", "false");
+      els.animateTButton.textContent = completed ? "Replay t 0 -> 1" : "Play t 0 -> 1";
+    }
+
+    function animateTStep(timestamp) {
+      if (state.tAnimationFrame === null) return;
+      const durationMs = 6000;
+      const totalSteps = 24;
+      const progress = Math.min(1, (timestamp - state.tAnimationStart) / durationMs);
+      const step = Math.min(totalSteps, Math.floor(progress * totalSteps));
+
+      if (step !== state.tAnimationStep) {
+        state.tAnimationStep = step;
+        els.tSlider.value = (step / totalSteps).toFixed(4);
+        scheduleRender();
+      }
+
+      if (progress < 1) {
+        state.tAnimationFrame = requestAnimationFrame(animateTStep);
+      } else {
+        state.tAnimationFrame = null;
+        state.tAnimationStep = -1;
+        els.animateTButton.setAttribute("aria-pressed", "false");
+        els.animateTButton.textContent = "Replay t 0 -> 1";
+      }
+    }
+
+    function toggleTAnimation() {
+      if (state.tAnimationFrame !== null) {
+        stopTAnimation();
+        return;
+      }
+      els.tSlider.value = "0";
+      scheduleRender();
+      state.tAnimationStart = performance.now();
+      state.tAnimationStep = -1;
+      els.animateTButton.setAttribute("aria-pressed", "true");
+      els.animateTButton.textContent = "Pause t animation";
+      state.tAnimationFrame = requestAnimationFrame(animateTStep);
+    }
+
     function scheduleRender() {
       if (state.renderQueued) return;
       state.renderQueued = true;
@@ -1315,8 +1391,11 @@
     }
 
     function fitToFrameMultiple(samples) {
-      const maxFrames = 192;
-      const frames = Math.max(16, Math.min(maxFrames, Math.floor(samples.length / melConfig.hopLength)));
+      const maxFrames = 256;
+      const frames = Math.max(
+        16,
+        Math.min(maxFrames, Math.floor(samples.length / melConfig.hopLength)),
+      );
       const len = frames * melConfig.hopLength;
       const out = new Float32Array(len);
       const start = Math.max(0, Math.floor((samples.length - len) / 2));
@@ -1377,11 +1456,16 @@
       }
     }
 
-    els.tSlider.addEventListener("input", scheduleRender);
+    els.tSlider.addEventListener("input", () => {
+      stopTAnimation();
+      scheduleRender();
+    });
+    els.animateTButton.addEventListener("click", toggleTAnimation);
     els.waveGenPreset.addEventListener("click", () => applyPreset("wavegen"));
     els.wavTtsPreset.addEventListener("click", () => applyPreset("wavtts"));
 
     els.sampleTButton.addEventListener("click", () => {
+      stopTAnimation();
       state.sampleSeed += 1;
       const rng = makeRng(state.sampleSeed);
       const sampled = sampleTFromMode(getActivePreset().samplingMode, rng);
