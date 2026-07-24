@@ -1,0 +1,1423 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WaveGen Spectral Forcing Demo</title>
+  <style>
+    :root {
+      --bg: #f6f7f2;
+      --ink: #1f2328;
+      --muted: #64706f;
+      --line: #d9ded4;
+      --panel: #ffffff;
+      --teal: #087f8c;
+      --rose: #c43d62;
+      --green: #527a3d;
+      --shadow: 0 14px 32px rgba(31, 35, 40, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    header {
+      padding: 22px clamp(18px, 4vw, 44px) 14px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfbf7;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(22px, 3vw, 34px);
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .formula {
+      max-width: 980px;
+      margin: 0 auto;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    main {
+      width: min(1480px, calc(100vw - 24px));
+      margin: 18px auto 34px;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns:
+        minmax(110px, 0.8fr)
+        minmax(270px, 1.9fr)
+        minmax(310px, 2.2fr)
+        minmax(180px, 1.3fr)
+        minmax(220px, 1.5fr)
+        minmax(180px, 1.2fr);
+      gap: 10px;
+      align-items: stretch;
+      margin-bottom: 14px;
+    }
+
+    label.control,
+    .control {
+      display: grid;
+      gap: 6px;
+      min-width: 0;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .control span,
+    .button-row span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    input,
+    select,
+    button {
+      width: 100%;
+      min-height: 34px;
+      color: var(--ink);
+      font: inherit;
+      border: 1px solid #c8d0c6;
+      border-radius: 7px;
+      background: #fff;
+    }
+
+    input[type="range"] {
+      accent-color: var(--teal);
+      border: 0;
+      min-height: 28px;
+    }
+
+    input[type="file"] {
+      padding: 5px 6px;
+      font-size: 12px;
+    }
+
+    button {
+      cursor: pointer;
+      font-weight: 700;
+      background: #20302f;
+      color: white;
+      border-color: #20302f;
+    }
+
+    button.secondary {
+      color: var(--ink);
+      background: #f9faf6;
+      border-color: #c8d0c6;
+    }
+
+    .preset-control {
+      min-width: 0;
+    }
+
+    .preset-buttons {
+      display: grid;
+      grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+      gap: 6px;
+    }
+
+    button.preset-button[aria-pressed="true"] {
+      color: white;
+      background: #20302f;
+      border-color: #20302f;
+    }
+
+    button.mini-button {
+      width: auto;
+      min-width: 92px;
+      min-height: 30px;
+      padding: 0 12px;
+      white-space: nowrap;
+    }
+
+    .value-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .value {
+      font-variant-numeric: tabular-nums;
+      color: var(--ink);
+      font-weight: 800;
+    }
+
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+
+    #samplingDetails {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .config-grid div {
+      min-width: 0;
+      padding: 6px 7px;
+      border-radius: 6px;
+      background: #f3f6f0;
+      text-align: center;
+    }
+
+    .figure-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.22fr) minmax(320px, 0.78fr);
+      grid-template-areas:
+        "wave side"
+        "mel-input mel-wave";
+      gap: 14px;
+      align-items: start;
+    }
+
+    .side-stack {
+      grid-area: side;
+      display: grid;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .plot {
+      min-width: 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .wave-panel {
+      grid-area: wave;
+    }
+
+    .mel-input-panel {
+      grid-area: mel-input;
+    }
+
+    .mel-wave-panel {
+      grid-area: mel-wave;
+    }
+
+    .plot-header {
+      display: flex;
+      gap: 12px;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 8px;
+    }
+
+    .plot-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: flex-end;
+      min-width: 0;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.2;
+      letter-spacing: 0;
+    }
+
+    .readout {
+      color: var(--muted);
+      font-size: 12px;
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 260px;
+      border-radius: 6px;
+      background: #fbfcfa;
+      border: 1px solid #e2e7de;
+    }
+
+    #waveCanvas {
+      height: 500px;
+    }
+
+    #timeCanvas,
+    #scaleCanvas {
+      height: 226px;
+    }
+
+    #melInputCanvas,
+    #melWaveCanvas {
+      height: 310px;
+    }
+
+    .status {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .bad {
+      color: #9f2b46;
+      font-weight: 800;
+    }
+
+    @media (max-width: 1320px) {
+      .toolbar {
+        grid-template-columns: repeat(3, minmax(140px, 1fr));
+      }
+
+      .preset-control {
+        grid-column: span 2;
+      }
+    }
+
+    @media (max-width: 1100px) {
+      .figure-grid {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "wave"
+          "side"
+          "mel-input"
+          "mel-wave";
+      }
+    }
+
+    @media (max-width: 680px) {
+      main {
+        width: min(100vw - 14px, 1480px);
+        margin-top: 10px;
+      }
+
+      header {
+        padding-inline: 14px;
+      }
+
+      .toolbar {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .preset-control {
+        grid-column: 1 / -1;
+      }
+
+      .wide-on-mobile {
+        grid-column: 1 / -1;
+      }
+
+      .control {
+        padding: 9px;
+      }
+
+      canvas,
+      #waveCanvas,
+      #timeCanvas,
+      #scaleCanvas,
+      #melInputCanvas,
+      #melWaveCanvas {
+        height: 250px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>WaveGen Spectral Forcing Demo</h1>
+    <p class="formula">
+      Spectral Forcing guides the frequency details of the input waveform by forming earlier toward the target Mel-spectrogram of x_t. </p>
+    <p class="formula">
+      x_t = (1 - t) * x0 + t * (x1 * latents_scale), mel = log(clamp(MelSpectrogram(power=1), 1e-5)), n_fft = hop * 4, n_mels = 64
+    </p>
+  </header>
+
+  <main>
+    <section class="toolbar" aria-label="controls">
+      <label class="control">
+        <div class="value-row"><span>t</span><output id="tValue" class="value">0.50</output></div>
+        <input id="tSlider" type="range" min="0" max="1" step="0.01" value="0.5">
+      </label>
+
+      <div class="control preset-control">
+        <span>Noise Scheduling</span>
+        <div class="preset-buttons" role="group" aria-label="Noise scheduling preset">
+          <button id="waveGenPreset" class="secondary preset-button" type="button" aria-pressed="true">WaveGen</button>
+          <button id="wavTtsPreset" class="secondary preset-button" type="button" aria-pressed="false">WavTTS + Spectral Forcing</button>
+        </div>
+      </div>
+
+      <div class="control fixed-settings-control wide-on-mobile">
+        <span>Fixed settings</span>
+        <div class="config-grid">
+          <div>Latents Scale<br><strong id="activeScale">4.0x</strong></div>
+          <div>Sampling Rate<br><strong id="activeSampleRate">24,000 Hz</strong></div>
+          <div>t Sampling<br><strong id="activeSampling">Uniform</strong></div>
+        </div>
+      </div>
+
+      <label class="control">
+        <span>Original sample</span>
+        <select id="gtSampleSelect">
+          <option value="0">Original 01 - S06227 W000028</option>
+          <option value="1">Original 02 - S06217 W000113</option>
+          <option value="2">Original 03 - S00030 W000000</option>
+          <option value="3">Original 04 - S00180 W000106</option>
+          <option value="4">Original 05 - S00250 W000013</option>
+          <option value="5">Original 06 - S00290 W000015</option>
+          <option value="6">Original 07 - B00016 S00763</option>
+          <option value="7">Original 08 - B00016 S06673</option>
+          <option value="8">Original 09 - B00026 S03366</option>
+          <option value="9">Original 10 - B00026 S05536</option>
+          <option value="10">Original 11 - B00030 S08976</option>
+          <option value="11">Original 12 - B00030 S00036</option>
+          <option value="12">Original 13 - B00031 S01604</option>
+          <option value="13">Original 14 - B00031 S02094</option>
+          <option value="14">Original 15 - B00031 S02394</option>
+        </select>
+        <button id="loadGtButton" class="secondary" type="button">Load original</button>
+      </label>
+
+      <div class="control sampling-control wide-on-mobile">
+        <span>t Sampling Details</span>
+        <div id="samplingDetails" class="config-grid">
+          <div>Distribution<br>Uniform</div>
+          <div>Support<br>t ~ [0, 1]</div>
+        </div>
+        <button id="sampleTButton" class="secondary" type="button">Sample t</button>
+      </div>
+
+      <label class="control">
+        <span>WAV input</span>
+        <input id="wavFile" type="file" accept=".wav,audio/wav">
+      </label>
+
+    </section>
+
+    <section class="figure-grid" aria-label="plots">
+      <article class="plot wave-panel">
+        <div class="plot-header">
+          <h2>x_t waveform, t = 0..1</h2>
+          <div class="plot-actions">
+            <button id="playXtButton" class="mini-button" type="button" title="Peak-normalized playback of the current x_t">Play x_t</button>
+            <div id="waveStats" class="readout"></div>
+          </div>
+        </div>
+        <canvas id="waveCanvas"></canvas>
+      </article>
+
+      <div class="side-stack">
+        <article class="plot">
+          <div class="plot-header">
+            <h2>t sampling distribution</h2>
+            <div id="timeStats" class="readout"></div>
+          </div>
+          <canvas id="timeCanvas"></canvas>
+        </article>
+
+        <article class="plot">
+          <div class="plot-header">
+            <h2>mel scale metrics</h2>
+            <div id="ratioStats" class="readout"></div>
+          </div>
+          <canvas id="scaleCanvas"></canvas>
+        </article>
+      </div>
+
+      <article class="plot mel-input-panel">
+        <div class="plot-header">
+          <h2>input mel_t</h2>
+          <div id="melInputStats" class="readout"></div>
+        </div>
+        <canvas id="melInputCanvas"></canvas>
+      </article>
+
+      <article class="plot mel-wave-panel">
+        <div class="plot-header">
+          <h2>mel(x_t / latents_scale)</h2>
+          <div id="melWaveStats" class="readout"></div>
+        </div>
+        <canvas id="melWaveCanvas"></canvas>
+      </article>
+    </section>
+
+    <div id="status" class="status"></div>
+  </main>
+
+  <script src="audio_original_samples.js"></script>
+  <script>
+    "use strict";
+
+    const DEFAULT_FRAMES = 128;
+    const EPS = 1e-5;
+    const P_MEAN = -0.8;
+    const P_STD = 0.8;
+    const PRESETS = {
+      wavegen: {
+        label: "WaveGen",
+        latentsScale: 4,
+        sampleRate: 24000,
+        samplingMode: "uniform"
+      },
+      wavtts: {
+        label: "WavTTS + Spectral Forcing",
+        latentsScale: 9,
+        sampleRate: 16000,
+        samplingMode: "logistic_normal"
+      }
+    };
+    const AUDIO_SAMPLES = window.AUDIO_SAMPLE_DATA || [
+      { label: "Original 01 - S06227 W000028", name: "EN_B00000_S06227_W000028.mp3", url: "audio_originals/EN_B00000_S06227_W000028.mp3" },
+      { label: "Original 02 - S06217 W000113", name: "EN_B00000_S06217_W000113.mp3", url: "audio_originals/EN_B00000_S06217_W000113.mp3" },
+      { label: "Original 03 - S00030 W000000", name: "EN_B00000_S00030_W000000.mp3", url: "audio_originals/EN_B00000_S00030_W000000.mp3" },
+      { label: "Original 04 - S00180 W000106", name: "EN_B00000_S00180_W000106.mp3", url: "audio_originals/EN_B00000_S00180_W000106.mp3" },
+      { label: "Original 05 - S00250 W000013", name: "EN_B00000_S00250_W000013.mp3", url: "audio_originals/EN_B00000_S00250_W000013.mp3" },
+      { label: "Original 06 - S00290 W000015", name: "EN_B00000_S00290_W000015.mp3", url: "audio_originals/EN_B00000_S00290_W000015.mp3" },
+      { label: "Original 07 - B00016 S00763", name: "EN_B00016_S00763_W000016.mp3", url: "audio_originals/EN_B00016_S00763_W000016.mp3" },
+      { label: "Original 08 - B00016 S06673", name: "EN_B00016_S06673_W000035.mp3", url: "audio_originals/EN_B00016_S06673_W000035.mp3" },
+      { label: "Original 09 - B00026 S03366", name: "EN_B00026_S03366_W000074.mp3", url: "audio_originals/EN_B00026_S03366_W000074.mp3" },
+      { label: "Original 10 - B00026 S05536", name: "EN_B00026_S05536_W000012.mp3", url: "audio_originals/EN_B00026_S05536_W000012.mp3" },
+      { label: "Original 11 - B00030 S08976", name: "EN_B00030_S08976_W000129.mp3", url: "audio_originals/EN_B00030_S08976_W000129.mp3" },
+      { label: "Original 12 - B00030 S00036", name: "EN_B00030_S00036_W000002.mp3", url: "audio_originals/EN_B00030_S00036_W000002.mp3" },
+      { label: "Original 13 - B00031 S01604", name: "EN_B00031_S01604_W000072.mp3", url: "audio_originals/EN_B00031_S01604_W000072.mp3" },
+      { label: "Original 14 - B00031 S02094", name: "EN_B00031_S02094_W000024.mp3", url: "audio_originals/EN_B00031_S02094_W000024.mp3" },
+      { label: "Original 15 - B00031 S02394", name: "EN_B00031_S02394_W000001.mp3", url: "audio_originals/EN_B00031_S02394_W000001.mp3" }
+    ];
+    let melConfig = {
+      sampleRate: PRESETS.wavegen.sampleRate,
+      hopLength: 240,
+      nMels: 64
+    };
+
+    const els = {
+      tSlider: document.getElementById("tSlider"),
+      tValue: document.getElementById("tValue"),
+      waveGenPreset: document.getElementById("waveGenPreset"),
+      wavTtsPreset: document.getElementById("wavTtsPreset"),
+      activeScale: document.getElementById("activeScale"),
+      activeSampleRate: document.getElementById("activeSampleRate"),
+      activeSampling: document.getElementById("activeSampling"),
+      samplingDetails: document.getElementById("samplingDetails"),
+      gtSampleSelect: document.getElementById("gtSampleSelect"),
+      loadGtButton: document.getElementById("loadGtButton"),
+      sampleTButton: document.getElementById("sampleTButton"),
+      playXtButton: document.getElementById("playXtButton"),
+      wavFile: document.getElementById("wavFile"),
+      waveCanvas: document.getElementById("waveCanvas"),
+      timeCanvas: document.getElementById("timeCanvas"),
+      melInputCanvas: document.getElementById("melInputCanvas"),
+      melWaveCanvas: document.getElementById("melWaveCanvas"),
+      scaleCanvas: document.getElementById("scaleCanvas"),
+      waveStats: document.getElementById("waveStats"),
+      timeStats: document.getElementById("timeStats"),
+      melInputStats: document.getElementById("melInputStats"),
+      melWaveStats: document.getElementById("melWaveStats"),
+      ratioStats: document.getElementById("ratioStats"),
+      status: document.getElementById("status")
+    };
+
+    let pre = buildSpectrogramTables();
+
+    const state = {
+      seed: 424242,
+      activePreset: "wavegen",
+      sourceName: "synthetic",
+      x1: null,
+      x0: null,
+      x1Mel: null,
+      x0Mel: null,
+      frames: DEFAULT_FRAMES,
+      currentDecoded: null,
+      currentNoteHtml: "",
+      currentPreserveScale: false,
+      sampleSeed: 9001,
+      audioCtx: null,
+      currentSource: null,
+      renderQueued: false,
+      lastWaveMelKey: "",
+      cachedWaveMel: null
+    };
+
+    function makeRng(seed) {
+      let x = seed >>> 0;
+      return function rng() {
+        x += 0x6D2B79F5;
+        let t = x;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function gaussian(rng) {
+      let u = 0;
+      let v = 0;
+      while (u <= 1e-12) u = rng();
+      while (v <= 1e-12) v = rng();
+      return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+    }
+
+    function nFft() {
+      return melConfig.hopLength * 4;
+    }
+
+    function fftBins() {
+      return Math.floor(nFft() / 2) + 1;
+    }
+
+    function hopForSampleRate(sampleRate) {
+      return sampleRate === 24000 ? 240 : 160;
+    }
+
+    function getActivePreset() {
+      return PRESETS[state.activePreset];
+    }
+
+    function updatePresetUi() {
+      const preset = getActivePreset();
+      const isWaveGen = state.activePreset === "wavegen";
+      els.waveGenPreset.setAttribute("aria-pressed", String(isWaveGen));
+      els.wavTtsPreset.setAttribute("aria-pressed", String(!isWaveGen));
+      els.activeScale.textContent = `${preset.latentsScale.toFixed(1)}x`;
+      els.activeSampleRate.textContent = `${preset.sampleRate.toLocaleString("en-US")} Hz`;
+      els.activeSampling.textContent = preset.samplingMode === "uniform" ? "Uniform" : "Logistic Normal";
+      els.samplingDetails.innerHTML = preset.samplingMode === "uniform"
+        ? "<div>Distribution<br>Uniform</div><div>Support<br>t ~ [0, 1]</div>"
+        : `<div>P_mean<br>${P_MEAN.toFixed(2)}</div><div>P_std<br>${P_STD.toFixed(2)}</div>`;
+    }
+
+    function applyPreset(presetId) {
+      if (!PRESETS[presetId]) return;
+      state.activePreset = presetId;
+      const preset = getActivePreset();
+      const fixedHop = hopForSampleRate(preset.sampleRate);
+      const next = {
+        sampleRate: preset.sampleRate,
+        hopLength: fixedHop,
+        nMels: 64
+      };
+      const changed =
+        next.sampleRate !== melConfig.sampleRate ||
+        next.hopLength !== melConfig.hopLength ||
+        next.nMels !== melConfig.nMels;
+      updatePresetUi();
+      if (changed) {
+        melConfig = next;
+        pre = buildSpectrogramTables();
+        state.lastWaveMelKey = "";
+        state.cachedWaveMel = null;
+        if (state.currentDecoded) {
+          applyDecodedWave(state.currentDecoded, state.sourceName, state.currentNoteHtml, { preserveScale: state.currentPreserveScale });
+        } else {
+          scheduleRender();
+        }
+      } else {
+        scheduleRender();
+      }
+    }
+
+    function buildSpectrogramTables() {
+      const fft = nFft();
+      const bins = fftBins();
+      const hann = new Float32Array(fft);
+      for (let i = 0; i < fft; i++) {
+        hann[i] = 0.5 - 0.5 * Math.cos((2 * Math.PI * i) / (fft - 1));
+      }
+
+      const cos = new Float32Array(bins * fft);
+      const sin = new Float32Array(bins * fft);
+      for (let k = 0; k < bins; k++) {
+        for (let n = 0; n < fft; n++) {
+          const a = (2 * Math.PI * k * n) / fft;
+          cos[k * fft + n] = Math.cos(a);
+          sin[k * fft + n] = Math.sin(a);
+        }
+      }
+
+      return { hann, cos, sin, mel: buildMelFilterBank() };
+    }
+
+    function hzToMel(hz) {
+      return 2595 * Math.log10(1 + hz / 700);
+    }
+
+    function melToHz(mel) {
+      return 700 * (Math.pow(10, mel / 2595) - 1);
+    }
+
+    function buildMelFilterBank() {
+      const fft = nFft();
+      const binsCount = fftBins();
+      const filters = new Float32Array(melConfig.nMels * binsCount);
+      const minMel = hzToMel(0);
+      const maxMel = hzToMel(melConfig.sampleRate / 2);
+      const points = [];
+      for (let i = 0; i < melConfig.nMels + 2; i++) {
+        points.push(melToHz(minMel + (i / (melConfig.nMels + 1)) * (maxMel - minMel)));
+      }
+      const bins = points.map((hz) => Math.floor((fft + 1) * hz / melConfig.sampleRate));
+      for (let m = 0; m < melConfig.nMels; m++) {
+        const left = Math.max(0, bins[m]);
+        const center = Math.max(left + 1, bins[m + 1]);
+        const right = Math.max(center + 1, bins[m + 2]);
+        for (let k = left; k < Math.min(center, binsCount); k++) {
+          filters[m * binsCount + k] = (k - left) / Math.max(1, center - left);
+        }
+        for (let k = center; k < Math.min(right, binsCount); k++) {
+          filters[m * binsCount + k] = (right - k) / Math.max(1, right - center);
+        }
+      }
+      return filters;
+    }
+
+    function makeSyntheticWave(seed) {
+      const rng = makeRng(seed);
+      const wave = new Float32Array(DEFAULT_FRAMES * melConfig.hopLength);
+      let phase = 0;
+      for (let i = 0; i < wave.length; i++) {
+        const sec = i / melConfig.sampleRate;
+        const pos = i / Math.max(1, wave.length - 1);
+        const f0 = 105 + 42 * Math.sin(2 * Math.PI * 1.7 * sec) + 23 * Math.sin(2 * Math.PI * 0.39 * sec + 0.8);
+        phase += (2 * Math.PI * f0) / melConfig.sampleRate;
+        const vowelA = 0.65 + 0.35 * Math.sin(2 * Math.PI * 2.4 * sec);
+        const vowelB = 0.55 + 0.45 * Math.sin(2 * Math.PI * 1.3 * sec + 1.1);
+        const env = Math.sin(Math.PI * pos) * (0.72 + 0.28 * Math.sin(2 * Math.PI * 4.3 * sec) ** 2);
+        const voiced =
+          0.86 * Math.sin(phase) +
+          0.38 * vowelA * Math.sin(2 * phase + 0.2) +
+          0.16 * vowelB * Math.sin(3 * phase + 1.4) +
+          0.07 * Math.sin(5 * phase + 0.9);
+        const breath = 0.018 * gaussian(rng) * (0.4 + 0.6 * Math.sin(Math.PI * pos));
+        const transient = Math.exp(-Math.pow((pos - 0.18) / 0.018, 2)) * 0.22 * gaussian(rng);
+        wave[i] = env * (0.22 * voiced + breath) + transient;
+      }
+      normalizePeak(wave, 0.32);
+      return wave;
+    }
+
+    function normalizePeak(wave, target) {
+      let peak = 0;
+      for (let i = 0; i < wave.length; i++) peak = Math.max(peak, Math.abs(wave[i]));
+      if (peak > 0) {
+        const gain = target / peak;
+        for (let i = 0; i < wave.length; i++) wave[i] *= gain;
+      }
+    }
+
+    function resetNoiseAndMels() {
+      const rng = makeRng(state.seed + 99);
+      state.x0 = new Float32Array(state.x1.length);
+      for (let i = 0; i < state.x0.length; i++) state.x0[i] = gaussian(rng);
+      state.frames = Math.floor(state.x1.length / melConfig.hopLength);
+      state.x1Mel = melFromWave(state.x1, state.frames);
+      state.x0Mel = new Float32Array(state.frames * melConfig.nMels);
+      for (let i = 0; i < state.x0Mel.length; i++) state.x0Mel[i] = gaussian(rng);
+      state.lastWaveMelKey = "";
+      state.cachedWaveMel = null;
+    }
+
+    function setSynthetic(advanceSeed = true) {
+      if (advanceSeed) state.seed += 37;
+      const preset = getActivePreset();
+      state.sourceName = "synthetic";
+      state.currentDecoded = null;
+      state.currentNoteHtml = "";
+      state.currentPreserveScale = false;
+      state.x1 = makeSyntheticWave(state.seed);
+      resetNoiseAndMels();
+      els.status.textContent = `preset=${preset.label}, source=${state.sourceName}, sample_rate=${melConfig.sampleRate}, hop_length=${melConfig.hopLength}, n_fft=${nFft()}, n_mels=${melConfig.nMels}, mel=TorchMel-style log magnitude mel, t_sampling=${preset.samplingMode}, latents_scale=${preset.latentsScale}`;
+      scheduleRender();
+    }
+
+    function melFromWave(wave, targetFrames) {
+      const fft = nFft();
+      const bins = fftBins();
+      const frames = targetFrames ?? Math.floor(wave.length / melConfig.hopLength);
+      const out = new Float32Array(frames * melConfig.nMels);
+      const magnitude = new Float32Array(bins);
+
+      for (let frame = 0; frame < frames; frame++) {
+        const start = frame * melConfig.hopLength - Math.floor(fft / 2);
+        for (let k = 0; k < bins; k++) {
+          let re = 0;
+          let im = 0;
+          const tableBase = k * fft;
+          for (let n = 0; n < fft; n++) {
+            const idx = start + n;
+            const sample = idx >= 0 && idx < wave.length ? wave[idx] * pre.hann[n] : 0;
+            re += sample * pre.cos[tableBase + n];
+            im -= sample * pre.sin[tableBase + n];
+          }
+          magnitude[k] = Math.sqrt(re * re + im * im);
+        }
+
+        for (let m = 0; m < melConfig.nMels; m++) {
+          let e = 0;
+          const filterBase = m * bins;
+          for (let k = 0; k < bins; k++) e += pre.mel[filterBase + k] * magnitude[k];
+          out[frame * melConfig.nMels + m] = Math.log(Math.max(EPS, e));
+        }
+      }
+      return out;
+    }
+
+    function makeXt(t, scale) {
+      const out = new Float32Array(state.x1.length);
+      for (let i = 0; i < out.length; i++) out[i] = (1 - t) * state.x0[i] + t * state.x1[i] * scale;
+      return out;
+    }
+
+    function normalizedAudioBuffer(wave, peakTarget = 0.85) {
+      let peak = 0;
+      for (let i = 0; i < wave.length; i++) peak = Math.max(peak, Math.abs(wave[i]));
+      const gain = peak > 1e-9 ? peakTarget / peak : 1;
+      const out = new Float32Array(wave.length);
+      for (let i = 0; i < wave.length; i++) {
+        out[i] = Math.max(-1, Math.min(1, wave[i] * gain));
+      }
+      return { audio: out, peak, gain };
+    }
+
+    async function playCurrentXt() {
+      if (!state.x1) return;
+      const t = Number(els.tSlider.value);
+      const scale = getActivePreset().latentsScale;
+      const xt = makeXt(t, scale);
+      const { audio, peak, gain } = normalizedAudioBuffer(xt);
+
+      if (!state.audioCtx) {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) {
+          els.waveStats.textContent = "audio unavailable";
+          return;
+        }
+        state.audioCtx = new AudioContextCtor();
+      }
+      if (state.audioCtx.state === "suspended") {
+        state.audioCtx.resume().catch((err) => {
+          els.waveStats.textContent = `audio resume error: ${err.message}`;
+        });
+      }
+      if (state.currentSource) {
+        try {
+          state.currentSource.stop();
+        } catch (_) {
+        }
+        state.currentSource = null;
+      }
+
+      const buffer = state.audioCtx.createBuffer(1, audio.length, melConfig.sampleRate);
+      buffer.copyToChannel(audio, 0);
+      const source = state.audioCtx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(state.audioCtx.destination);
+      source.onended = () => {
+        if (state.currentSource === source) state.currentSource = null;
+        els.playXtButton.textContent = "Play x_t";
+      };
+      state.currentSource = source;
+      els.playXtButton.textContent = "Stop x_t";
+      source.start();
+      els.waveStats.textContent = `playing x_t, sr=${melConfig.sampleRate}, peak=${fmt(peak)}, gain=${fmt(gain, 2)}`;
+    }
+
+    function makeInputMelT(t) {
+      const out = new Float32Array(state.x1Mel.length);
+      for (let i = 0; i < out.length; i++) out[i] = (1 - t) * state.x0Mel[i] + t * state.x1Mel[i];
+      return out;
+    }
+
+    function stats(arr) {
+      let min = Infinity;
+      let max = -Infinity;
+      let sum = 0;
+      let sumSq = 0;
+      for (let i = 0; i < arr.length; i++) {
+        const v = arr[i];
+        if (v < min) min = v;
+        if (v > max) max = v;
+        sum += v;
+        sumSq += v * v;
+      }
+      const mean = sum / Math.max(1, arr.length);
+      const rms = Math.sqrt(sumSq / Math.max(1, arr.length));
+      let varSum = 0;
+      for (let i = 0; i < arr.length; i++) {
+        const d = arr[i] - mean;
+        varSum += d * d;
+      }
+      return { min, max, mean, rms, std: Math.sqrt(varSum / Math.max(1, arr.length)) };
+    }
+
+    function fmt(n, digits = 3) {
+      if (!Number.isFinite(n)) return "nan";
+      const a = Math.abs(n);
+      if (a > 999 || (a > 0 && a < 0.001)) return n.toExponential(2);
+      return n.toFixed(digits);
+    }
+
+    function canvasContext(canvas) {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      const w = Math.max(1, Math.round(rect.width * dpr));
+      const h = Math.max(1, Math.round(rect.height * dpr));
+      if (canvas.width !== w || canvas.height !== h) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+      const ctx = canvas.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return { ctx, w: rect.width, h: rect.height };
+    }
+
+    function clear(ctx, w, h) {
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "#fbfcfa";
+      ctx.fillRect(0, 0, w, h);
+    }
+
+    function drawWave(canvas, xt, t, scale) {
+      const { ctx, w, h } = canvasContext(canvas);
+      clear(ctx, w, h);
+      const pad = { l: 48, r: 16, t: 18, b: 30 };
+      const topH = h * 0.48;
+      drawAxes(ctx, pad.l, pad.t, w - pad.l - pad.r, topH - pad.t - 16, "current x_t");
+      drawSeries(ctx, xt, pad.l, pad.t, w - pad.l - pad.r, topH - pad.t - 16, "#087f8c", 1.6);
+      drawZeroLine(ctx, pad.l, pad.t, w - pad.l - pad.r, topH - pad.t - 16);
+      ctx.fillStyle = "#1f2328";
+      ctx.font = "12px ui-sans-serif, system-ui";
+      ctx.fillText(`t=${t.toFixed(2)}, scale=${scale.toFixed(2)}`, pad.l, 15);
+
+      const snapshots = [0, 0.2, 0.4, 0.6, 0.8, 1];
+      const rowGap = 5;
+      const bottomTop = topH + 6;
+      const rowH = (h - bottomTop - pad.b - rowGap * (snapshots.length - 1)) / snapshots.length;
+      for (let i = 0; i < snapshots.length; i++) {
+        const st = snapshots[i];
+        const y = bottomTop + i * (rowH + rowGap);
+        const tmp = makeXt(st, scale);
+        const color = Math.abs(st - t) < 0.055 ? "#c43d62" : "#527a3d";
+        ctx.fillStyle = "#64706f";
+        ctx.font = "11px ui-sans-serif, system-ui";
+        ctx.fillText(`t=${st.toFixed(1)}`, 8, y + rowH * 0.58);
+        drawMiniSeries(ctx, tmp, pad.l, y, w - pad.l - pad.r, rowH, color);
+      }
+    }
+
+    function drawAxes(ctx, x, y, w, h, label) {
+      ctx.strokeStyle = "#d9ded4";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x, y, w, h);
+      ctx.fillStyle = "#64706f";
+      ctx.font = "11px ui-sans-serif, system-ui";
+      ctx.fillText(label, x + 8, y + 16);
+    }
+
+    function drawZeroLine(ctx, x, y, w, h) {
+      ctx.strokeStyle = "rgba(31, 35, 40, 0.25)";
+      ctx.beginPath();
+      ctx.moveTo(x, y + h / 2);
+      ctx.lineTo(x + w, y + h / 2);
+      ctx.stroke();
+    }
+
+    function drawSeries(ctx, arr, x, y, w, h, color, width) {
+      let peak = 0;
+      for (let i = 0; i < arr.length; i++) peak = Math.max(peak, Math.abs(arr[i]));
+      peak = Math.max(peak, 1e-6);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      const stride = Math.max(1, Math.floor(arr.length / Math.max(1, w * 2)));
+      let first = true;
+      for (let i = 0; i < arr.length; i += stride) {
+        const px = x + (i / (arr.length - 1)) * w;
+        const py = y + h * (0.5 - 0.46 * (arr[i] / peak));
+        if (first) {
+          ctx.moveTo(px, py);
+          first = false;
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      ctx.stroke();
+    }
+
+    function drawMiniSeries(ctx, arr, x, y, w, h, color) {
+      ctx.fillStyle = "rgba(226, 231, 222, 0.55)";
+      ctx.fillRect(x, y, w, h);
+      drawSeries(ctx, arr, x, y, w, h, color, 1.1);
+      drawZeroLine(ctx, x, y, w, h);
+    }
+
+    function sampleUniform(rng) {
+      return rng();
+    }
+
+    function sampleLogisticNormal(rng) {
+      const z = gaussian(rng) * P_STD + P_MEAN;
+      const t = 1 / (1 + Math.exp(-z));
+      return Math.min(1, Math.max(0, t));
+    }
+
+    function sampleTFromMode(mode, rng) {
+      return mode === "uniform" ? sampleUniform(rng) : sampleLogisticNormal(rng);
+    }
+
+    function drawTimeDistribution(canvas, currentT, mode) {
+      const { ctx, w, h } = canvasContext(canvas);
+      clear(ctx, w, h);
+      const pad = { l: 42, r: 18, t: 18, b: 34 };
+      const pw = w - pad.l - pad.r;
+      const ph = h - pad.t - pad.b;
+      const bins = 40;
+      const uni = new Float32Array(bins);
+      const logn = new Float32Array(bins);
+      const rng = makeRng(12345);
+      const n = 12000;
+      for (let i = 0; i < n; i++) {
+        uni[Math.min(bins - 1, Math.floor(sampleUniform(rng) * bins))]++;
+        logn[Math.min(bins - 1, Math.floor(sampleLogisticNormal(rng) * bins))]++;
+      }
+      let maxCount = 1;
+      for (let i = 0; i < bins; i++) maxCount = Math.max(maxCount, uni[i], logn[i]);
+      ctx.strokeStyle = "#d9ded4";
+      ctx.strokeRect(pad.l, pad.t, pw, ph);
+      for (let i = 0; i < bins; i++) {
+        const x = pad.l + (i / bins) * pw;
+        const bw = Math.max(1, pw / bins - 1);
+        const uh = (uni[i] / maxCount) * ph;
+        const lh = (logn[i] / maxCount) * ph;
+        ctx.fillStyle = mode === "uniform" ? "rgba(8, 127, 140, 0.72)" : "rgba(8, 127, 140, 0.22)";
+        ctx.fillRect(x, pad.t + ph - uh, bw, uh);
+        ctx.fillStyle = mode === "logistic_normal" ? "rgba(196, 61, 98, 0.72)" : "rgba(196, 61, 98, 0.20)";
+        ctx.fillRect(x, pad.t + ph - lh, bw, lh);
+      }
+      const tx = pad.l + currentT * pw;
+      ctx.strokeStyle = "#1f2328";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(tx, pad.t - 4);
+      ctx.lineTo(tx, pad.t + ph + 4);
+      ctx.stroke();
+      ctx.fillStyle = "#1f2328";
+      ctx.font = "12px ui-sans-serif, system-ui";
+      ctx.fillText("0", pad.l - 3, h - 12);
+      ctx.fillText("1", pad.l + pw - 6, h - 12);
+      drawLegend(ctx, pad.l + 8, pad.t + 12, [
+        [mode === "uniform" ? "uniform selected" : "uniform", "#087f8c"],
+        [mode === "logistic_normal" ? "logistic-normal selected" : "logistic-normal", "#c43d62"],
+        ["current t", "#1f2328"]
+      ]);
+      els.timeStats.textContent = mode === "uniform"
+        ? "t_sampling=uniform"
+        : `t_sampling=logistic_normal, P_mean=${P_MEAN.toFixed(1)}, P_std=${P_STD.toFixed(1)}`;
+    }
+
+    function drawLegend(ctx, x, y, items) {
+      ctx.font = "11px ui-sans-serif, system-ui";
+      let ox = x;
+      for (const [name, color] of items) {
+        ctx.fillStyle = color;
+        ctx.fillRect(ox, y - 8, 10, 10);
+        ctx.fillStyle = "#64706f";
+        ctx.fillText(name, ox + 14, y + 1);
+        ox += ctx.measureText(name).width + 36;
+      }
+    }
+
+    function colorRamp(z) {
+      const t = Math.max(0, Math.min(1, z));
+      const stops = [
+        [31, 42, 68],
+        [8, 127, 140],
+        [239, 210, 115],
+        [196, 61, 98]
+      ];
+      const p = t * (stops.length - 1);
+      const i = Math.min(stops.length - 2, Math.floor(p));
+      const f = p - i;
+      const a = stops[i];
+      const b = stops[i + 1];
+      const r = Math.round(a[0] + (b[0] - a[0]) * f);
+      const g = Math.round(a[1] + (b[1] - a[1]) * f);
+      const bl = Math.round(a[2] + (b[2] - a[2]) * f);
+      return `rgb(${r},${g},${bl})`;
+    }
+
+    function divergeRamp(z) {
+      const t = Math.max(0, Math.min(1, z));
+      const a = t < 0.5
+        ? [[38, 70, 83], [246, 244, 232], t * 2]
+        : [[246, 244, 232], [177, 58, 82], (t - 0.5) * 2];
+      const r = Math.round(a[0][0] + (a[1][0] - a[0][0]) * a[2]);
+      const g = Math.round(a[0][1] + (a[1][1] - a[0][1]) * a[2]);
+      const b = Math.round(a[0][2] + (a[1][2] - a[0][2]) * a[2]);
+      return `rgb(${r},${g},${b})`;
+    }
+
+    function drawHeatmap(canvas, data, frames, mels, min, max, label) {
+      const { ctx, w, h } = canvasContext(canvas);
+      clear(ctx, w, h);
+      const pad = { l: 42, r: 18, t: 18, b: 30 };
+      drawHeatmapAt(ctx, data, frames, mels, min, max, pad.l, pad.t, w - pad.l - pad.r, h - pad.t - pad.b, false);
+      drawColorBar(ctx, min, max, w - 15, pad.t, h - pad.t - pad.b, false);
+      ctx.fillStyle = "#64706f";
+      ctx.font = "11px ui-sans-serif, system-ui";
+      ctx.fillText(label, pad.l + 8, 14);
+      ctx.fillText("time", pad.l + (w - pad.l - pad.r) / 2 - 10, h - 9);
+      ctx.save();
+      ctx.translate(13, pad.t + (h - pad.t - pad.b) / 2 + 18);
+      ctx.rotate(-Math.PI / 2);
+      ctx.fillText("mel bin", 0, 0);
+      ctx.restore();
+    }
+
+    function drawHeatmapAt(ctx, data, frames, mels, min, max, x, y, w, h, diverge) {
+      const cellW = w / frames;
+      const cellH = h / mels;
+      const denom = Math.max(1e-9, max - min);
+      for (let f = 0; f < frames; f++) {
+        for (let m = 0; m < mels; m++) {
+          const v = data[f * mels + m];
+          const z = (v - min) / denom;
+          ctx.fillStyle = diverge ? divergeRamp(z) : colorRamp(z);
+          const yy = y + (mels - 1 - m) * cellH;
+          ctx.fillRect(x + f * cellW, yy, Math.ceil(cellW) + 0.5, Math.ceil(cellH) + 0.5);
+        }
+      }
+      ctx.strokeStyle = "#d9ded4";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x, y, w, h);
+    }
+
+    function drawColorBar(ctx, min, max, x, y, h, diverge) {
+      const steps = 80;
+      for (let i = 0; i < steps; i++) {
+        const z = i / (steps - 1);
+        ctx.fillStyle = diverge ? divergeRamp(1 - z) : colorRamp(1 - z);
+        ctx.fillRect(x, y + (i / steps) * h, 8, Math.ceil(h / steps) + 1);
+      }
+      ctx.fillStyle = "#64706f";
+      ctx.font = "10px ui-sans-serif, system-ui";
+      ctx.fillText(fmt(max, 2), x - 30, y + 8);
+      ctx.fillText(fmt(min, 2), x - 30, y + h);
+    }
+
+    function drawScaleMetrics(canvas, inputStats, waveStats) {
+      const { ctx, w, h } = canvasContext(canvas);
+      clear(ctx, w, h);
+      const pad = { l: 50, r: 16, t: 42, b: 58 };
+      const metrics = [
+        ["std", inputStats.std, waveStats.std],
+        ["rms", inputStats.rms, waveStats.rms],
+        ["range", inputStats.max - inputStats.min, waveStats.max - waveStats.min]
+      ];
+      const maxVal = Math.max(1e-6, ...metrics.flatMap((m) => [m[1], m[2]]));
+      const groupW = (w - pad.l - pad.r) / metrics.length;
+      const barW = Math.min(34, groupW * 0.28);
+      ctx.strokeStyle = "#d9ded4";
+      ctx.strokeRect(pad.l, pad.t, w - pad.l - pad.r, h - pad.t - pad.b);
+      for (let i = 0; i < metrics.length; i++) {
+        const [name, input, wave] = metrics[i];
+        const baseX = pad.l + i * groupW + groupW * 0.5;
+        const chartH = h - pad.t - pad.b;
+        const ih = (input / maxVal) * chartH;
+        const wh = (wave / maxVal) * chartH;
+        ctx.fillStyle = "#087f8c";
+        ctx.fillRect(baseX - barW - 2, pad.t + chartH - ih, barW, ih);
+        ctx.fillStyle = "#c43d62";
+        ctx.fillRect(baseX + 2, pad.t + chartH - wh, barW, wh);
+        ctx.fillStyle = "#1f2328";
+        ctx.font = "11px ui-sans-serif, system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText(name, baseX, h - 16);
+        ctx.fillStyle = "#64706f";
+        ctx.fillText(fmt(wave / Math.max(input, 1e-9), 2) + "x", baseX, h - 36);
+      }
+      ctx.textAlign = "left";
+      drawLegend(ctx, pad.l + 8, 20, [
+        ["input mel_t", "#087f8c"],
+        ["mel(x_t)", "#c43d62"]
+      ]);
+    }
+
+    function scheduleRender() {
+      if (state.renderQueued) return;
+      state.renderQueued = true;
+      requestAnimationFrame(() => {
+        state.renderQueued = false;
+        render();
+      });
+    }
+
+    function render() {
+      if (!state.x1) return;
+      const t = Number(els.tSlider.value);
+      const preset = getActivePreset();
+      const scale = preset.latentsScale;
+      const mode = preset.samplingMode;
+      els.tValue.textContent = t.toFixed(2);
+
+      const xt = makeXt(t, scale);
+      const inputMel = makeInputMelT(t);
+      const waveMelKey = `${t.toFixed(4)}:${scale.toFixed(4)}:${state.sourceName}:${state.x1.length}`;
+      let waveMel;
+      if (waveMelKey === state.lastWaveMelKey && state.cachedWaveMel) {
+        waveMel = state.cachedWaveMel;
+      } else {
+        const unscaled = new Float32Array(xt.length);
+        const invScale = 1 / Math.max(1e-9, scale);
+        for (let i = 0; i < xt.length; i++) unscaled[i] = xt[i] * invScale;
+        waveMel = melFromWave(unscaled, state.frames);
+        state.lastWaveMelKey = waveMelKey;
+        state.cachedWaveMel = waveMel;
+      }
+
+      const stWave = stats(xt);
+      const stInputMel = stats(inputMel);
+      const stWaveMel = stats(waveMel);
+      const sharedMelMin = Math.min(stInputMel.min, stWaveMel.min);
+      const sharedMelMax = Math.max(stInputMel.max, stWaveMel.max);
+      drawWave(els.waveCanvas, xt, t, scale);
+      drawTimeDistribution(els.timeCanvas, t, mode);
+      drawHeatmap(els.melInputCanvas, inputMel, state.frames, melConfig.nMels, sharedMelMin, sharedMelMax, "shared log-mel scale");
+      drawHeatmap(els.melWaveCanvas, waveMel, state.frames, melConfig.nMels, sharedMelMin, sharedMelMax, "shared log-mel scale");
+      drawScaleMetrics(els.scaleCanvas, stInputMel, stWaveMel);
+
+      els.waveStats.textContent = `rms=${fmt(stWave.rms)}, min=${fmt(stWave.min)}, max=${fmt(stWave.max)}`;
+      els.melInputStats.textContent = `std=${fmt(stInputMel.std)}, rms=${fmt(stInputMel.rms)}, shared=[${fmt(sharedMelMin, 2)}, ${fmt(sharedMelMax, 2)}]`;
+      els.melWaveStats.textContent = `std=${fmt(stWaveMel.std)}, rms=${fmt(stWaveMel.rms)}, shared=[${fmt(sharedMelMin, 2)}, ${fmt(sharedMelMax, 2)}]`;
+      els.ratioStats.textContent = `std ratio=${fmt(stWaveMel.std / Math.max(stInputMel.std, 1e-9), 2)}x`;
+    }
+
+    function decodeWav(arrayBuffer) {
+      const view = new DataView(arrayBuffer);
+      function str(off, len) {
+        let s = "";
+        for (let i = 0; i < len; i++) s += String.fromCharCode(view.getUint8(off + i));
+        return s;
+      }
+      if (str(0, 4) !== "RIFF" || str(8, 4) !== "WAVE") throw new Error("Not a RIFF/WAVE file.");
+      let offset = 12;
+      let fmt = null;
+      let dataOffset = 0;
+      let dataSize = 0;
+      while (offset + 8 <= view.byteLength) {
+        const id = str(offset, 4);
+        const size = view.getUint32(offset + 4, true);
+        const body = offset + 8;
+        if (id === "fmt ") {
+          fmt = {
+            audioFormat: view.getUint16(body, true),
+            channels: view.getUint16(body + 2, true),
+            sampleRate: view.getUint32(body + 4, true),
+            bitsPerSample: view.getUint16(body + 14, true)
+          };
+        } else if (id === "data") {
+          dataOffset = body;
+          dataSize = size;
+        }
+        offset = body + size + (size % 2);
+      }
+      if (!fmt || !dataOffset) throw new Error("Missing fmt or data chunk.");
+
+      const bytes = fmt.bitsPerSample / 8;
+      const frames = Math.floor(dataSize / (bytes * fmt.channels));
+      const mono = new Float32Array(frames);
+      for (let i = 0; i < frames; i++) {
+        let sum = 0;
+        for (let ch = 0; ch < fmt.channels; ch++) {
+          const p = dataOffset + (i * fmt.channels + ch) * bytes;
+          let v;
+          if (fmt.audioFormat === 3 && fmt.bitsPerSample === 32) {
+            v = view.getFloat32(p, true);
+          } else if (fmt.audioFormat === 1 && fmt.bitsPerSample === 16) {
+            v = view.getInt16(p, true) / 32768;
+          } else if (fmt.audioFormat === 1 && fmt.bitsPerSample === 24) {
+            let raw = view.getUint8(p) | (view.getUint8(p + 1) << 8) | (view.getUint8(p + 2) << 16);
+            if (raw & 0x800000) raw |= 0xff000000;
+            v = raw / 8388608;
+          } else if (fmt.audioFormat === 1 && fmt.bitsPerSample === 32) {
+            v = view.getInt32(p, true) / 2147483648;
+          } else {
+            throw new Error(`Unsupported WAV encoding: format=${fmt.audioFormat}, bits=${fmt.bitsPerSample}`);
+          }
+          sum += v;
+        }
+        mono[i] = sum / fmt.channels;
+      }
+      return { samples: mono, sampleRate: fmt.sampleRate };
+    }
+
+    function ensureAudioContext() {
+      if (!state.audioCtx) {
+        const AudioContextCtor = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextCtor) throw new Error("Browser audio decoding is unavailable.");
+        state.audioCtx = new AudioContextCtor();
+      }
+      return state.audioCtx;
+    }
+
+    async function decodeAudioSample(arrayBuffer, sourceName) {
+      if (/\.wav(e)?$/i.test(sourceName)) return decodeWav(arrayBuffer);
+      const audioCtx = ensureAudioContext();
+      const decoded = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+      const mono = new Float32Array(decoded.length);
+      for (let ch = 0; ch < decoded.numberOfChannels; ch++) {
+        const channel = decoded.getChannelData(ch);
+        for (let i = 0; i < mono.length; i++) mono[i] += channel[i] / decoded.numberOfChannels;
+      }
+      return { samples: mono, sampleRate: decoded.sampleRate };
+    }
+
+    function resampleLinear(samples, srcRate, dstRate) {
+      if (srcRate === dstRate) return samples;
+      const outLen = Math.max(1, Math.round(samples.length * dstRate / srcRate));
+      const out = new Float32Array(outLen);
+      const ratio = srcRate / dstRate;
+      for (let i = 0; i < outLen; i++) {
+        const x = i * ratio;
+        const j = Math.floor(x);
+        const f = x - j;
+        const a = samples[Math.min(j, samples.length - 1)];
+        const b = samples[Math.min(j + 1, samples.length - 1)];
+        out[i] = a + (b - a) * f;
+      }
+      return out;
+    }
+
+    function fitToFrameMultiple(samples) {
+      const maxFrames = 192;
+      const frames = Math.max(16, Math.min(maxFrames, Math.floor(samples.length / melConfig.hopLength)));
+      const len = frames * melConfig.hopLength;
+      const out = new Float32Array(len);
+      const start = Math.max(0, Math.floor((samples.length - len) / 2));
+      for (let i = 0; i < len; i++) out[i] = samples[start + i] || 0;
+      return out;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function applyDecodedWave(decoded, sourceName, noteHtml = "", options = {}) {
+      const preset = getActivePreset();
+      const resampled = resampleLinear(decoded.samples, decoded.sampleRate, melConfig.sampleRate);
+      const fitted = fitToFrameMultiple(resampled);
+      const preserveScale = options.preserveScale === true;
+      if (!preserveScale) normalizePeak(fitted, 0.95);
+      state.sourceName = sourceName;
+      state.currentDecoded = decoded;
+      const scaleNote = preserveScale ? ", source_scale=raw" : "";
+      state.currentNoteHtml = noteHtml;
+      state.currentPreserveScale = preserveScale;
+      state.x1 = fitted;
+      resetNoiseAndMels();
+      els.status.innerHTML = `preset=${preset.label}, source=${escapeHtml(sourceName)}, original_sample_rate=${decoded.sampleRate}, resampled=${melConfig.sampleRate}, frames=${state.frames}, hop_length=${melConfig.hopLength}, n_fft=${nFft()}, n_mels=${melConfig.nMels}, mel=TorchMel-style log magnitude mel, t_sampling=${preset.samplingMode}, latents_scale=${preset.latentsScale}${scaleNote}${noteHtml}`;
+      scheduleRender();
+    }
+
+    async function handleWavFile(file) {
+      try {
+        const decoded = decodeWav(await file.arrayBuffer());
+        applyDecodedWave(decoded, file.name, ', <span class="bad">browser STFT/mel filters are still an approximation of torchaudio</span>');
+      } catch (err) {
+        els.status.textContent = `WAV load failed: ${err.message}`;
+      }
+    }
+
+    async function loadOriginalSample() {
+      const sample = AUDIO_SAMPLES[Number(els.gtSampleSelect.value)] || AUDIO_SAMPLES[0];
+      els.loadGtButton.textContent = "Loading...";
+      els.loadGtButton.disabled = true;
+      els.status.textContent = `loading ${sample.label}...`;
+      try {
+        const response = await fetch(sample.url);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const decoded = await decodeAudioSample(await response.arrayBuffer(), sample.name);
+        els.wavFile.value = "";
+        applyDecodedWave(decoded, sample.name, `, original_preset=${escapeHtml(sample.label)}, <span class="bad">browser STFT/mel filters are still an approximation of torchaudio</span>`, { preserveScale: true });
+      } catch (err) {
+        els.status.textContent = `original sample load failed: ${err.message}`;
+      } finally {
+        els.loadGtButton.disabled = false;
+        els.loadGtButton.textContent = "Load original";
+      }
+    }
+
+    els.tSlider.addEventListener("input", scheduleRender);
+    els.waveGenPreset.addEventListener("click", () => applyPreset("wavegen"));
+    els.wavTtsPreset.addEventListener("click", () => applyPreset("wavtts"));
+
+    els.sampleTButton.addEventListener("click", () => {
+      state.sampleSeed += 1;
+      const rng = makeRng(state.sampleSeed);
+      const sampled = sampleTFromMode(getActivePreset().samplingMode, rng);
+      els.tSlider.value = sampled.toFixed(2);
+      scheduleRender();
+    });
+
+    els.playXtButton.addEventListener("click", () => {
+      if (state.currentSource) {
+        try {
+          state.currentSource.stop();
+        } catch (_) {
+        }
+        state.currentSource = null;
+        els.playXtButton.textContent = "Play x_t";
+        els.waveStats.textContent = "stopped x_t";
+        return;
+      }
+      playCurrentXt().catch((err) => {
+        els.playXtButton.textContent = "Play x_t";
+        els.waveStats.textContent = `audio error: ${err.message}`;
+      });
+    });
+
+    els.loadGtButton.addEventListener("click", () => {
+      loadOriginalSample();
+    });
+
+    els.wavFile.addEventListener("change", () => {
+      const file = els.wavFile.files && els.wavFile.files[0];
+      if (file) handleWavFile(file);
+    });
+
+    window.addEventListener("resize", scheduleRender);
+    updatePresetUi();
+    loadOriginalSample();
+  </script>
+</body>
+</html>
