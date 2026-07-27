@@ -374,9 +374,6 @@
     <h1>WaveGen Spectral Forcing Demo</h1>
     <p class="formula">
       Spectral Forcing guides the frequency details of the input waveform by forming earlier toward the target Mel-spectrogram of x_t. </p>
-    <p class="formula">
-      x_t = (1 - t) * x0 + t * (x1 * latents_scale), mel = log(clamp(MelSpectrogram(power=1), 1e-5)), n_fft = hop * 4, n_mels = 64
-    </p>
     <p class="training-notice" role="note">
       Training-time visualization: These are not model-generated samples. This demo shows how x_t and the Spectral Forcing mel input are constructed from noise and a target waveform during training.
     </p>
@@ -478,7 +475,7 @@
 
       <article class="plot mel-input-panel">
         <div class="plot-header">
-          <h2>input mel_t</h2>
+          <h2>input x_t_mel</h2>
           <div id="melInputStats" class="readout"></div>
         </div>
         <canvas id="melInputCanvas"></canvas>
@@ -486,14 +483,14 @@
 
       <article class="plot mel-wave-panel">
         <div class="plot-header">
-          <h2>mel(x_t / latents_scale)</h2>
+          <h2>mel(x_t_wave)</h2>
           <div id="melWaveStats" class="readout"></div>
         </div>
         <canvas id="melWaveCanvas"></canvas>
       </article>
     </section>
 
-    <div id="status" class="status"></div>
+    <div id="status" class="status" hidden></div>
   </main>
 
   <script src="audio_original_samples.js"></script>
@@ -1193,8 +1190,8 @@
       }
       ctx.textAlign = "left";
       drawLegend(ctx, pad.l + 8, 20, [
-        ["input mel_t", "#087f8c"],
-        ["mel(x_t)", "#c43d62"]
+        ["input x_t_mel", "#087f8c"],
+        ["mel(x_t_wave)", "#c43d62"]
       ]);
     }
 
