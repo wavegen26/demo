@@ -146,7 +146,7 @@
 
     .preset-buttons {
       display: grid;
-      grid-template-columns: minmax(0, 0.7fr) minmax(0, 1.3fr);
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 6px;
     }
 
@@ -389,17 +389,17 @@
       </label>
 
       <div class="control preset-control">
-        <span>Noise Scheduling</span>
-        <div class="preset-buttons" role="group" aria-label="Noise scheduling preset">
-          <button id="waveGenPreset" class="secondary preset-button" type="button" aria-pressed="true">WaveGen</button>
-          <button id="wavTtsPreset" class="secondary preset-button" type="button" aria-pressed="false">WavTTS + Spectral Forcing</button>
+        <span>Noise Scheduling (WaveGen)</span>
+        <div class="preset-buttons" role="group" aria-label="WaveGen t sampling distribution">
+          <button id="uniformTButton" class="secondary preset-button" type="button" aria-pressed="true">Uniform t</button>
+          <button id="logisticTButton" class="secondary preset-button" type="button" aria-pressed="false">Logistic-normal t</button>
         </div>
       </div>
 
       <div class="control fixed-settings-control wide-on-mobile">
         <span>Fixed settings</span>
         <div class="config-grid">
-          <div>Latents Scale<br><strong id="activeScale">4.0x</strong></div>
+          <div>x0 Scale<br><strong id="activeScale">x0 * 0.25</strong></div>
           <div>Sampling Rate<br><strong id="activeSampleRate">24,000 Hz</strong></div>
           <div>t Sampling<br><strong id="activeSampling">Uniform</strong></div>
         </div>
@@ -505,14 +505,7 @@
       wavegen: {
         label: "WaveGen",
         latentsScale: 4,
-        sampleRate: 24000,
-        samplingMode: "uniform"
-      },
-      wavtts: {
-        label: "WavTTS + Spectral Forcing",
-        latentsScale: 9,
-        sampleRate: 16000,
-        samplingMode: "logistic_normal"
+        sampleRate: 24000
       }
     };
     const AUDIO_SAMPLES = window.AUDIO_SAMPLE_DATA || [
@@ -542,8 +535,8 @@
       tSlider: document.getElementById("tSlider"),
       tValue: document.getElementById("tValue"),
       animateTButton: document.getElementById("animateTButton"),
-      waveGenPreset: document.getElementById("waveGenPreset"),
-      wavTtsPreset: document.getElementById("wavTtsPreset"),
+      uniformTButton: document.getElementById("uniformTButton"),
+      logisticTButton: document.getElementById("logisticTButton"),
       activeScale: document.getElementById("activeScale"),
       activeSampleRate: document.getElementById("activeSampleRate"),
       activeSampling: document.getElementById("activeSampling"),
@@ -570,7 +563,7 @@
 
     const state = {
       seed: 424242,
-      activePreset: "wavegen",
+      samplingMode: "uniform",
       sourceName: "synthetic",
       x1: null,
       x0: null,
@@ -618,55 +611,35 @@
       return Math.floor(nFft() / 2) + 1;
     }
 
-    function hopForSampleRate(sampleRate) {
-      return sampleRate === 24000 ? 240 : 160;
-    }
-
     function getActivePreset() {
-      return PRESETS[state.activePreset];
+      return PRESETS.wavegen;
     }
 
     function updatePresetUi() {
       const preset = getActivePreset();
-      const isWaveGen = state.activePreset === "wavegen";
-      els.waveGenPreset.setAttribute("aria-pressed", String(isWaveGen));
-      els.wavTtsPreset.setAttribute("aria-pressed", String(!isWaveGen));
-      els.activeScale.textContent = `${preset.latentsScale.toFixed(1)}x`;
+      const isUniform = state.samplingMode === "uniform";
+      els.uniformTButton.setAttribute("aria-pressed", String(isUniform));
+      els.logisticTButton.setAttribute("aria-pressed", String(!isUniform));
+      els.activeScale.textContent = `x0 * ${(1 / preset.latentsScale).toFixed(2)}`;
       els.activeSampleRate.textContent = `${preset.sampleRate.toLocaleString("en-US")} Hz`;
-      els.activeSampling.textContent = preset.samplingMode === "uniform" ? "Uniform" : "Logistic Normal";
-      els.samplingDetails.innerHTML = preset.samplingMode === "uniform"
+      els.activeSampling.textContent = isUniform ? "Uniform" : "Logistic Normal";
+      els.samplingDetails.innerHTML = isUniform
         ? "<div>Distribution<br>Uniform</div><div>Support<br>t ~ [0, 1]</div>"
         : `<div>P_mean<br>${P_MEAN.toFixed(2)}</div><div>P_std<br>${P_STD.toFixed(2)}</div>`;
     }
 
-    function applyPreset(presetId) {
-      if (!PRESETS[presetId]) return;
-      state.activePreset = presetId;
-      const preset = getActivePreset();
-      const fixedHop = hopForSampleRate(preset.sampleRate);
-      const next = {
-        sampleRate: preset.sampleRate,
-        hopLength: fixedHop,
-        nMels: 64
-      };
-      const changed =
-        next.sampleRate !== melConfig.sampleRate ||
-        next.hopLength !== melConfig.hopLength ||
-        next.nMels !== melConfig.nMels;
+    function applySamplingMode(mode) {
+      if (mode !== "uniform" && mode !== "logistic_normal") return;
+      stopTAnimation();
+      state.samplingMode = mode;
+      state.sampleSeed += 1;
+      const rng = makeRng(state.sampleSeed);
+      const sampled = mode === "uniform"
+        ? sampleUniform(rng)
+        : sampleLogisticNormal(rng);
+      els.tSlider.value = sampled.toFixed(2);
       updatePresetUi();
-      if (changed) {
-        melConfig = next;
-        pre = buildSpectrogramTables();
-        state.lastWaveMelKey = "";
-        state.cachedWaveMel = null;
-        if (state.currentDecoded) {
-          applyDecodedWave(state.currentDecoded, state.sourceName, state.currentNoteHtml, { preserveScale: state.currentPreserveScale });
-        } else {
-          scheduleRender();
-        }
-      } else {
-        scheduleRender();
-      }
+      scheduleRender();
     }
 
     function buildSpectrogramTables() {
@@ -778,7 +751,7 @@
       state.currentPreserveScale = false;
       state.x1 = makeSyntheticWave(state.seed);
       resetNoiseAndMels();
-      els.status.textContent = `preset=${preset.label}, source=${state.sourceName}, sample_rate=${melConfig.sampleRate}, hop_length=${melConfig.hopLength}, n_fft=${nFft()}, n_mels=${melConfig.nMels}, mel=TorchMel-style log magnitude mel, t_sampling=${preset.samplingMode}, latents_scale=${preset.latentsScale}`;
+      els.status.textContent = `preset=${preset.label}, source=${state.sourceName}, sample_rate=${melConfig.sampleRate}, hop_length=${melConfig.hopLength}, n_fft=${nFft()}, n_mels=${melConfig.nMels}, mel=TorchMel-style log magnitude mel, t_sampling=${state.samplingMode}, latents_scale=${preset.latentsScale}`;
       scheduleRender();
     }
 
@@ -939,7 +912,7 @@
       drawZeroLine(ctx, pad.l, pad.t, w - pad.l - pad.r, topH - pad.t - 16);
       ctx.fillStyle = "#1f2328";
       ctx.font = "12px ui-sans-serif, system-ui";
-      ctx.fillText(`t=${t.toFixed(2)}, scale=${scale.toFixed(2)}`, pad.l, 15);
+      ctx.fillText(`t=${t.toFixed(2)}, x0 * ${(1 / scale).toFixed(2)}`, pad.l, 15);
 
       const snapshots = [0, 0.2, 0.4, 0.6, 0.8, 1];
       const rowGap = 5;
@@ -1013,10 +986,6 @@
       return Math.min(1, Math.max(0, t));
     }
 
-    function sampleTFromMode(mode, rng) {
-      return mode === "uniform" ? sampleUniform(rng) : sampleLogisticNormal(rng);
-    }
-
     function drawTimeDistribution(canvas, currentT, mode) {
       const { ctx, w, h } = canvasContext(canvas);
       clear(ctx, w, h);
@@ -1043,7 +1012,7 @@
         const lh = (logn[i] / maxCount) * ph;
         ctx.fillStyle = mode === "uniform" ? "rgba(8, 127, 140, 0.72)" : "rgba(8, 127, 140, 0.22)";
         ctx.fillRect(x, pad.t + ph - uh, bw, uh);
-        ctx.fillStyle = mode === "logistic_normal" ? "rgba(196, 61, 98, 0.72)" : "rgba(196, 61, 98, 0.20)";
+        ctx.fillStyle = mode === "logistic_normal" ? "rgba(196, 61, 98, 0.72)" : "rgba(196, 61, 98, 0.22)";
         ctx.fillRect(x, pad.t + ph - lh, bw, lh);
       }
       const tx = pad.l + currentT * pw;
@@ -1256,7 +1225,6 @@
       const t = Number(els.tSlider.value);
       const preset = getActivePreset();
       const scale = preset.latentsScale;
-      const mode = preset.samplingMode;
       els.tValue.textContent = t.toFixed(2);
 
       const xt = makeXt(t, scale);
@@ -1280,7 +1248,7 @@
       const sharedMelMin = Math.min(stInputMel.min, stWaveMel.min);
       const sharedMelMax = Math.max(stInputMel.max, stWaveMel.max);
       drawWave(els.waveCanvas, xt, t, scale);
-      drawTimeDistribution(els.timeCanvas, t, mode);
+      drawTimeDistribution(els.timeCanvas, t, state.samplingMode);
       drawHeatmap(els.melInputCanvas, inputMel, state.frames, melConfig.nMels, sharedMelMin, sharedMelMax, "shared log-mel scale");
       drawHeatmap(els.melWaveCanvas, waveMel, state.frames, melConfig.nMels, sharedMelMin, sharedMelMax, "shared log-mel scale");
       drawScaleMetrics(els.scaleCanvas, stInputMel, stWaveMel);
@@ -1421,7 +1389,7 @@
       state.currentPreserveScale = preserveScale;
       state.x1 = fitted;
       resetNoiseAndMels();
-      els.status.innerHTML = `preset=${preset.label}, source=${escapeHtml(sourceName)}, original_sample_rate=${decoded.sampleRate}, resampled=${melConfig.sampleRate}, frames=${state.frames}, hop_length=${melConfig.hopLength}, n_fft=${nFft()}, n_mels=${melConfig.nMels}, mel=TorchMel-style log magnitude mel, t_sampling=${preset.samplingMode}, latents_scale=${preset.latentsScale}${scaleNote}${noteHtml}`;
+      els.status.innerHTML = `preset=${preset.label}, source=${escapeHtml(sourceName)}, original_sample_rate=${decoded.sampleRate}, resampled=${melConfig.sampleRate}, frames=${state.frames}, hop_length=${melConfig.hopLength}, n_fft=${nFft()}, n_mels=${melConfig.nMels}, mel=TorchMel-style log magnitude mel, t_sampling=${state.samplingMode}, latents_scale=${preset.latentsScale}${scaleNote}${noteHtml}`;
       scheduleRender();
     }
 
@@ -1458,14 +1426,16 @@
       scheduleRender();
     });
     els.animateTButton.addEventListener("click", toggleTAnimation);
-    els.waveGenPreset.addEventListener("click", () => applyPreset("wavegen"));
-    els.wavTtsPreset.addEventListener("click", () => applyPreset("wavtts"));
+    els.uniformTButton.addEventListener("click", () => applySamplingMode("uniform"));
+    els.logisticTButton.addEventListener("click", () => applySamplingMode("logistic_normal"));
 
     els.sampleTButton.addEventListener("click", () => {
       stopTAnimation();
       state.sampleSeed += 1;
       const rng = makeRng(state.sampleSeed);
-      const sampled = sampleTFromMode(getActivePreset().samplingMode, rng);
+      const sampled = state.samplingMode === "uniform"
+        ? sampleUniform(rng)
+        : sampleLogisticNormal(rng);
       els.tSlider.value = sampled.toFixed(2);
       scheduleRender();
     });
