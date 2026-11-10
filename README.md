@@ -1,1 +1,1 @@
-# demo
+# WaveGen [NeurIPS 2026]
